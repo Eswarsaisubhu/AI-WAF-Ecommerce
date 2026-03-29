@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAVENS</title>
+
+<link rel="stylesheet" href="/static/style.css">
+
+</head>
+
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+<div class="spinner"></div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+
+<div class="logo">
+<a href="/">
+<img src="/static/images/ravens_logo.png">
+</a>
+</div>
+
+<div class="nav-links">
+<a href="/">Home</a>
+<a href="/cart">Cart</a>
+<a href="/login">Login</a>
+<a href="/register">Register</a>
+<a href="/contact">Contact</a>
+<a href="/attack_lab">🧪 Attack Lab</a>
+<a href="/report">Report</a>
+<a href="/admin">Admin Panel</a>
+</div>
+
+</nav>
+
+<!-- MAIN CONTENT -->
+<main>
+{% block content %}{% endblock %}
+</main>
+
+<!-- FLOAT BUTTON -->
+<div class="floating-btn" onclick="togglePopup()">🛡️</div>
+
+<!-- POPUP PANEL -->
+<div id="popup" class="popup">
+
+<h3>Security Panel</h3>
+
+<p>WAF: <b>{{ "ON" if waf else "OFF" }}</b></p>
+<p>Mode: <b>{{ "SECURE" if secure else "VULNERABLE" }}</b></p>
+
+<a href="/toggle_waf">
+<button class="popup-btn">Toggle WAF</button>
+</a>
+
+<a href="/toggle_mode">
+<button class="popup-btn">Toggle Mode</button>
+</a>
+
+<a href="/dashboard">
+<button class="popup-btn">Dashboard</button>
+</a>
+
+</div>
+
+<!-- GLOBAL SCRIPT -->
+<script>
+
+// ======================
+// LOADER (SMOOTH)
+// ======================
+window.addEventListener("load", () => {
+    setTimeout(() => {
+        document.getElementById("loader").style.opacity = "0";
+        setTimeout(() => {
+            document.getElementById("loader").style.display = "none";
+        }, 300);
+    }, 300);
+});
+
+// ======================
+// POPUP LOGIC (FIXED)
+// ======================
+const popup = document.getElementById("popup");
+let timeout;
+
+function togglePopup(){
+    popup.style.display = popup.style.display === "block" ? "none" : "block";
+}
+
+// CLOSE WITH DELAY
+popup.addEventListener("mouseleave", () => {
+    timeout = setTimeout(() => {
+        popup.style.display = "none";
+    }, 500);
+});
+
+// CANCEL CLOSE
+popup.addEventListener("mouseenter", () => {
+    clearTimeout(timeout);
+});
+
+// ======================
+// GLOBAL ALERT SYSTEM
+// ======================
+function showAlert(msg){
+
+    const alertBox = document.createElement("div");
+
+    alertBox.innerText = msg;
+
+    alertBox.style.position = "fixed";
+    alertBox.style.top = "20px";
+    alertBox.style.right = "20px";
+    alertBox.style.background = "#ff1e3c";
+    alertBox.style.color = "white";
+    alertBox.style.padding = "12px 20px";
+    alertBox.style.borderRadius = "8px";
+    alertBox.style.zIndex = "9999";
+    alertBox.style.boxShadow = "0 0 15px rgba(255,0,0,0.5)";
+    alertBox.style.opacity = "0";
+    alertBox.style.transform = "translateY(-10px)";
+    alertBox.style.transition = "0.3s";
+
+    document.body.appendChild(alertBox);
+
+    // animate in
+    setTimeout(() => {
+        alertBox.style.opacity = "1";
+        alertBox.style.transform = "translateY(0)";
+    }, 100);
+
+    // remove
+    setTimeout(() => {
+        alertBox.style.opacity = "0";
+        setTimeout(() => alertBox.remove(), 300);
+    }, 3000);
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="products">
+
+<h2 style="text-align:center; margin-bottom:20px;">Your Cart</h2>
+
+{% if cart|length == 0 %}
+
+<div class="empty-cart">
+<h3>Your cart is empty</h3>
+<p>Add some products to get started</p>
+<a href="/">
+<button>Shop Now</button>
+</a>
+</div>
+
+{% else %}
+
+{% for item in cart %}
+
+<div class="product-card">
+
+<img src="/static/images/{{item.image}}" class="product-image">
+
+<h3>{{item.name}}</h3>
+
+<p class="price">₹{{item.price}}</p>
+
+<a href="/remove/{{loop.index0}}">
+<button>Remove</button>
+</a>
+
+</div>
+
+{% endfor %}
+
+<h2 style="text-align:center; margin-top:20px;">
+Total: ₹{{total}}
+</h2>
+
+{% endif %}
+
+</section>
+
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="hero">
+<div class="hero-content">
+
+<h1>🛡️ Attack Testing Lab</h1>
+
+<form method="POST" class="form">
+
+<input type="text" name="payload" placeholder="Enter attack payload..." required>
+
+<button type="submit">Test Attack</button>
+
+</form>
+
+{% if result %}
+<div style="margin-top:20px; text-align:left;">
+
+<p><b>Payload:</b> {{result.payload}}</p>
+
+<p><b>Rule Detection:</b>
+<span class="{{ 'blocked-text' if result.rule else 'allowed-text' }}">
+{{result.rule}}
+</span>
+</p>
+
+<p><b>ML Detection:</b>
+<span class="{{ 'blocked-text' if result.ml else 'allowed-text' }}">
+{{result.ml}}
+</span>
+</p>
+
+<p><b>Status:</b>
+<span class="{{ 'blocked-text' if 'Blocked' in result.status else 'allowed-text' }}">
+{{result.status}}
+</span>
+</p>
+
+</div>
+{% endif %}
+
+<!-- ALERT -->
+{% if result and "Blocked" in result.status %}
+<script>
+showAlert("⚠️ Attack Blocked!");
+</script>
+{% endif %}
+
+</div>
+</section>
+
+{% endblock %}

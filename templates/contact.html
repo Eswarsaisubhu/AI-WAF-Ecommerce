@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="hero">
+
+<div class="hero-content">
+
+<h1>Contact Us</h1>
+
+<form class="form">
+
+<input type="text" placeholder="Your Name" required>
+
+<input type="email" placeholder="Your Email" required>
+
+<textarea placeholder="Your Message"></textarea>
+
+<button type="submit">Send Message</button>
+
+</form>
+
+</div>
+
+</section>
+
+<script>
+document.querySelector(".form").addEventListener("submit", function(e){
+    e.preventDefault();
+    showAlert("✅ Message Sent Successfully!");
+});
+</script>
+
+{% endblock %}

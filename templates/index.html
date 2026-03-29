@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- HERO SECTION -->
+<section class="hero">
+
+<div class="overlay"></div>
+
+<div class="hero-content">
+<h1>RAVENS STREETWEAR</h1>
+<p>Premium Gen-Z Fashion Brand</p>
+
+<a href="#shop">
+<button>Shop Now</button>
+</a>
+
+</div>
+
+</section>
+
+<!-- PRODUCTS SECTION -->
+<section class="products" id="shop">
+
+{% if products|length == 0 %}
+
+<div class="empty-cart">
+<h3>No Products Found</h3>
+<p>Try searching something else</p>
+</div>
+
+{% else %}
+
+{% for product in products %}
+
+<div class="product-card">
+
+<img src="/static/images/{{product.image}}" class="product-image">
+
+<h3>{{product.name}}</h3>
+
+<p class="price">₹{{product.price}}</p>
+
+<a href="/add_to_cart/{{product.id}}">
+<button>Add to Cart</button>
+</a>
+
+</div>
+
+{% endfor %}
+
+{% endif %}
+
+</section>
+
+{% endblock %}

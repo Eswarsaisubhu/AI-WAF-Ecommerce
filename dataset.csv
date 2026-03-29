@@ -1,0 +1,49 @@
+input,label
+hello,0
+user123,0
+loginpage,0
+normaluser,0
+shoppingcart,0
+checkout,0
+productview,0
+email@example.com,0
+securelogin,0
+mypassword123,0
+
+' OR '1'='1,1
+' OR 1=1 --,1
+admin' --,1
+' OR ''=',1
+" OR ""=",1
+' OR 'a'='a,1
+1' OR '1'='1,1
+' OR '1'='1' --,1
+
+DROP TABLE users,1
+DROP DATABASE waf_db,1
+DELETE FROM users,1
+TRUNCATE TABLE users,1
+
+UNION SELECT username,password FROM users,1
+UNION SELECT * FROM admin,1
+
+<script>alert(1)</script>,1
+<script>document.cookie</script>,1
+<img src=x onerror=alert(1)>,1
+
+admin' UNION SELECT NULL,NULL --,1
+' OR sleep(5) --,1
+' AND 1=0 UNION SELECT NULL,NULL --,1
+
+SELECT * FROM users WHERE username='admin',1
+INSERT INTO users VALUES ('hacker','pass'),1
+
+-- comment attack,1
+# mysql comment,1
+
+login,0
+homepage,0
+orderdetails,0
+profileupdate,0
+wishlist,0
+cartitems,0

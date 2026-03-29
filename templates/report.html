@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="dashboard-body fade-in">
+
+<h1 class="dashboard-title">📊 WAF Report</h1>
+
+<div class="stats-container">
+
+<div class="card">
+<h2>{{total}}</h2>
+<p>Total Attacks</p>
+</div>
+
+<div class="card blocked">
+<h2>{{blocked}} ({{blocked_percent}}%)</h2>
+<p>Blocked</p>
+</div>
+
+<div class="card allowed">
+<h2>{{allowed}} ({{allowed_percent}}%)</h2>
+<p>Allowed</p>
+</div>
+
+</div>
+
+<!-- MOST COMMON -->
+<div class="card" style="margin:30px auto; width:300px;">
+<h2>{{most_common}}</h2>
+<p>Most Common Attack</p>
+</div>
+
+</section>
+
+{% endblock %}

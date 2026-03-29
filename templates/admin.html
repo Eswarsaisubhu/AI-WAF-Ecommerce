@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="products">
+
+<h1 style="text-align:center;">👑 Admin Panel</h1>
+
+<table class="attack-table">
+
+<tr>
+<th>ID</th>
+<th>Username</th>
+<th>Email</th>
+<th>Role</th>
+<th>Actions</th>
+</tr>
+
+{% for user in users %}
+<tr>
+<td>{{user[0]}}</td>
+<td>{{user[1]}}</td>
+<td>{{user[2]}}</td>
+<td>{{user[3]}}</td>
+
+<td>
+
+<a href="/make_admin/{{user[0]}}">
+<button>Make Admin</button>
+</a>
+
+<a href="/delete_user/{{user[0]}}">
+<button style="background:red;">Delete</button>
+</a>
+
+</td>
+
+</tr>
+{% endfor %}
+
+</table>
+
+</section>
+
+{% endblock %}

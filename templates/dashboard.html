@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<section class="dashboard-body fade-in">
+
+<h1 class="dashboard-title">🛡️ AI-WAF Dashboard</h1>
+
+<!-- ====================== -->
+<!-- STATS -->
+<!-- ====================== -->
+<div class="stats-container">
+
+<div class="card blocked">
+<h2 id="blockedCount">{{blocked}}</h2>
+<p>Blocked Attacks</p>
+</div>
+
+<div class="card allowed">
+<h2 id="allowedCount">{{allowed}}</h2>
+<p>Allowed Attacks</p>
+</div>
+
+</div>
+
+<!-- ====================== -->
+<!-- MAIN GRAPH -->
+<!-- ====================== -->
+<div class="chart-container">
+<canvas id="mainChart"></canvas>
+</div>
+
+<!-- ====================== -->
+<!-- ⚡ LIVE ATTACK FEED -->
+<!-- ====================== -->
+<h2 class="table-title">⚡ Live Attack Feed</h2>
+
+<table class="attack-table">
+
+<thead>
+<tr>
+<th>#</th>
+<th>IP</th>
+<th>Payload</th>
+<th>Type</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody id="liveTableBody"></tbody>
+
+</table>
+
+<!-- ====================== -->
+<!-- 📊 ATTACK LOGS -->
+<!-- ====================== -->
+<div class="table-section">
+
+<h2 class="table-title">Attack Logs</h2>
+
+<table class="attack-table">
+
+<thead>
+<tr>
+<th>#</th>
+<th>IP</th>
+<th>Payload</th>
+<th>Type</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for log in logs %}
+<tr class="table-row">
+<td>{{loop.index}}</td>
+<td>{{log[4]}}</td>
+<td class="payload">{{log[1]}}</td>
+<td>{{log[2]}}</td>
+<td class="{% if log[3]=='Blocked' %}blocked-text{% else %}allowed-text{% endif %}">
+{{log[3]}}
+</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+</section>
+
+<!-- ====================== -->
+<!-- SCRIPT -->
+<!-- ====================== -->
+<script>
+
+// ======================
+// BAR GRAPH
+// ======================
+new Chart(document.getElementById("mainChart"), {
+type: 'bar',
+data: {
+labels: ['Blocked', 'Allowed'],
+datasets: [{
+data: [{{blocked}}, {{allowed}}],
+}]
+},
+options:{
+animation:{duration:1200},
+plugins:{legend:{display:false}}
+}
+});
+
+// ======================
+// LIVE COUNTER
+// ======================
+setInterval(() => {
+fetch('/stats')
+.then(res => res.json())
+.then(data => {
+document.getElementById("blockedCount").innerText = data.blocked;
+document.getElementById("allowedCount").innerText = data.allowed;
+});
+}, 2000);
+
+// ======================
+// ⚡ LIVE ATTACK FEED (REVERSED)
+// ======================
+function loadLogs(){
+    fetch('/live_logs')
+    .then(res => res.json())
+    .then(data => {
+
+        const table = document.getElementById("liveTableBody");
+        table.innerHTML = "";
+
+        data.logs.forEach((log, index) => {
+
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>#${data.logs.length - index}</td>
+                <td>${log.ip || "Unknown"}</td>
+                <td>${log.payload}</td>
+                <td>${log.type}</td>
+                <td style="color:red">${log.status}</td>
+            `;
+
+            if(index === 0){
+                row.style.background = "#300";
+                row.style.boxShadow = "0 0 10px red";
+            }
+
+            table.appendChild(row);
+        });
+    });
+}
+
+// refresh every 2 sec
+setInterval(loadLogs, 2000);
+loadLogs();
+
+// ======================
+// TABLE ANIMATION
+// ======================
+const rows = document.querySelectorAll(".table-row");
+
+const observer = new IntersectionObserver((entries) => {
+entries.forEach(entry => {
+if(entry.isIntersecting){
+entry.target.style.opacity = "1";
+entry.target.style.transform = "translateY(0)";
+}
+});
+}, {threshold: 0.1});
+
+rows.forEach(row => observer.observe(row));
+
+</script>
+
+{% endblock %}

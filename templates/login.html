@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="hero">
+<div class="hero-content">
+
+<h1>Login</h1>
+
+<!-- ERROR MESSAGE -->
+{% if error %}
+<p style="color:#ff4d6d; margin-top:10px;">{{error}}</p>
+{% endif %}
+
+<form method="POST" class="form">
+
+<input type="text" name="username" placeholder="Username" required>
+
+<input type="password" name="password" placeholder="Password" required>
+
+<button type="submit">Login</button>
+
+</form>
+
+<p style="margin-top:15px; opacity:0.7;">
+Don't have an account?
+<a href="/register" style="color:#ff4d6d;">Register</a>
+</p>
+
+</div>
+</section>
+
+{% endblock %}
+
+{% if error and "Attack" in error %}
+<script>
+showAlert("⚠️ Attack Blocked!");
+</script>
+{% endif %}
