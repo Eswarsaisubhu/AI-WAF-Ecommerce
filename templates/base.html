@@ -13,7 +13,7 @@
 
 <!-- LOADER -->
 <div id="loader">
-<div class="spinner"></div>
+    <div class="spinner"></div>
 </div>
 
 <!-- NAVBAR -->
@@ -26,14 +26,22 @@
 </div>
 
 <div class="nav-links">
+
 <a href="/">Home</a>
 <a href="/cart">Cart</a>
-<a href="/login">Login</a>
-<a href="/register">Register</a>
 <a href="/contact">Contact</a>
 <a href="/attack_lab">🧪 Attack Lab</a>
 <a href="/report">Report</a>
 <a href="/admin">Admin Panel</a>
+
+{% if user %}
+    <span style="color:#0f0; font-weight:bold;">👋 {{ user }}</span>
+    <a href="/logout">Logout</a>
+{% else %}
+    <a href="/login">Login</a>
+    <a href="/register">Register</a>
+{% endif %}
+
 </div>
 
 </nav>
@@ -68,11 +76,13 @@
 
 </div>
 
-<!-- GLOBAL SCRIPT -->
+<!-- ====================== -->
+<!-- FIXED SCRIPT -->
+<!-- ====================== -->
 <script>
 
 // ======================
-// LOADER (SMOOTH)
+// LOADER
 // ======================
 window.addEventListener("load", () => {
     setTimeout(() => {
@@ -84,29 +94,36 @@ window.addEventListener("load", () => {
 });
 
 // ======================
-// POPUP LOGIC (FIXED)
+// POPUP FIX (MAIN FIX 🔥)
 // ======================
-const popup = document.getElementById("popup");
-let timeout;
+document.addEventListener("DOMContentLoaded", function(){
 
-function togglePopup(){
-    popup.style.display = popup.style.display === "block" ? "none" : "block";
-}
+    const popup = document.getElementById("popup");
 
-// CLOSE WITH DELAY
-popup.addEventListener("mouseleave", () => {
-    timeout = setTimeout(() => {
-        popup.style.display = "none";
-    }, 500);
+    window.togglePopup = function(){
+        if(popup.style.display === "block"){
+            popup.style.display = "none";
+        } else {
+            popup.style.display = "block";
+        }
+    };
+
+    let timeout;
+
+    popup.addEventListener("mouseleave", () => {
+        timeout = setTimeout(() => {
+            popup.style.display = "none";
+        }, 500);
+    });
+
+    popup.addEventListener("mouseenter", () => {
+        clearTimeout(timeout);
+    });
+
 });
 
-// CANCEL CLOSE
-popup.addEventListener("mouseenter", () => {
-    clearTimeout(timeout);
-});
-
 // ======================
-// GLOBAL ALERT SYSTEM
+// GLOBAL ALERT
 // ======================
 function showAlert(msg){
 
@@ -129,13 +146,11 @@ function showAlert(msg){
 
     document.body.appendChild(alertBox);
 
-    // animate in
     setTimeout(() => {
         alertBox.style.opacity = "1";
         alertBox.style.transform = "translateY(0)";
     }, 100);
 
-    // remove
     setTimeout(() => {
         alertBox.style.opacity = "0";
         setTimeout(() => alertBox.remove(), 300);

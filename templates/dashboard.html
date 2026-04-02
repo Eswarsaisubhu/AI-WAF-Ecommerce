@@ -6,7 +6,7 @@
 
 <section class="dashboard-body fade-in">
 
-<h1 class="dashboard-title">🛡️ AI-WAF Dashboard</h1>
+<h1 class="dashboard-title">AI-WAF Security Dashboard</h1>
 
 <!-- ====================== -->
 <!-- STATS -->
@@ -26,16 +26,16 @@
 </div>
 
 <!-- ====================== -->
-<!-- MAIN GRAPH -->
+<!-- GRAPH -->
 <!-- ====================== -->
 <div class="chart-container">
 <canvas id="mainChart"></canvas>
 </div>
 
 <!-- ====================== -->
-<!-- ⚡ LIVE ATTACK FEED -->
+<!-- LIVE FEED -->
 <!-- ====================== -->
-<h2 class="table-title">⚡ Live Attack Feed</h2>
+<h2 class="table-title">Live Attack Feed</h2>
 
 <table class="attack-table">
 
@@ -54,7 +54,7 @@
 </table>
 
 <!-- ====================== -->
-<!-- 📊 ATTACK LOGS -->
+<!-- LOGS -->
 <!-- ====================== -->
 <div class="table-section">
 
@@ -76,13 +76,22 @@
 
 {% for log in logs %}
 <tr class="table-row">
-<td>{{loop.index}}</td>
-<td>{{log[4]}}</td>
-<td class="payload">{{log[1]}}</td>
-<td>{{log[2]}}</td>
-<td class="{% if log[3]=='Blocked' %}blocked-text{% else %}allowed-text{% endif %}">
-{{log[3]}}
+
+<!-- ✅ FIXED SERIAL NUMBER -->
+<td>{{ loop.index }}</td>
+
+<td>{{ log[4] }}</td>
+
+<td class="payload" style="max-width:250px; word-wrap:break-word;">
+{{ log[1] }}
 </td>
+
+<td>{{ log[2] }}</td>
+
+<td class="{% if log[3]=='Blocked' %}blocked-text{% else %}allowed-text{% endif %}">
+{{ log[3] }}
+</td>
+
 </tr>
 {% endfor %}
 
@@ -100,7 +109,7 @@
 <script>
 
 // ======================
-// BAR GRAPH
+// GRAPH
 // ======================
 new Chart(document.getElementById("mainChart"), {
 type: 'bar',
@@ -108,11 +117,14 @@ data: {
 labels: ['Blocked', 'Allowed'],
 datasets: [{
 data: [{{blocked}}, {{allowed}}],
+backgroundColor: ['#ff4d4d','#00ffcc'],
+borderRadius: 6
 }]
 },
 options:{
 animation:{duration:1200},
-plugins:{legend:{display:false}}
+plugins:{legend:{display:false}},
+scales:{ y:{beginAtZero:true} }
 }
 });
 
@@ -129,44 +141,45 @@ document.getElementById("allowedCount").innerText = data.allowed;
 }, 2000);
 
 // ======================
-// ⚡ LIVE ATTACK FEED (REVERSED)
+// LIVE ATTACK FEED
 // ======================
 function loadLogs(){
-    fetch('/live_logs')
-    .then(res => res.json())
-    .then(data => {
+fetch('/live_logs')
+.then(res => res.json())
+.then(data => {
 
-        const table = document.getElementById("liveTableBody");
-        table.innerHTML = "";
+const table = document.getElementById("liveTableBody");
+table.innerHTML = "";
 
-        data.logs.forEach((log, index) => {
+data.logs.forEach((log, index) => {
 
-            const row = document.createElement("tr");
+const row = document.createElement("tr");
 
-            row.innerHTML = `
-                <td>#${data.logs.length - index}</td>
-                <td>${log.ip || "Unknown"}</td>
-                <td>${log.payload}</td>
-                <td>${log.type}</td>
-                <td style="color:red">${log.status}</td>
-            `;
+const statusColor = log.status === "Blocked" ? "red" : "#00ffcc";
 
-            if(index === 0){
-                row.style.background = "#300";
-                row.style.boxShadow = "0 0 10px red";
-            }
+row.innerHTML = `
+<td>${data.logs.length - index}</td>
+<td>${log.ip || "Unknown"}</td>
+<td style="max-width:200px; word-wrap:break-word;">${log.payload}</td>
+<td>${log.type}</td>
+<td style="color:${statusColor}">${log.status}</td>
+`;
 
-            table.appendChild(row);
-        });
-    });
+if(index === 0){
+row.style.background = "#2a0000";
+row.style.boxShadow = "0 0 10px red";
 }
 
-// refresh every 2 sec
+table.appendChild(row);
+});
+});
+}
+
 setInterval(loadLogs, 2000);
 loadLogs();
 
 // ======================
-// TABLE ANIMATION
+// ANIMATION
 // ======================
 const rows = document.querySelectorAll(".table-row");
 

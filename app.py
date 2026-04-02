@@ -6,6 +6,12 @@ from time import time
 
 app = Flask(__name__)
 app.secret_key = "secret123"
+@app.context_processor
+def inject_user():
+    return dict(
+        user=session.get('user'),
+        role=session.get('role')
+    )
 
 # ==============================
 # GLOBAL MODES
@@ -22,9 +28,10 @@ def is_rate_limited(ip):
     now = time()
     requests = requests_log.get(ip, [])
 
+    # keep only last 10 seconds
     requests = [r for r in requests if now - r < 10]
 
-    if len(requests) > 5:
+    if len(requests) >= 5:   # FIXED (>= instead of >)
         return True
 
     requests.append(now)
@@ -105,7 +112,26 @@ def home():
     return render_template("index.html", products=products, waf=waf_enabled, secure=secure_mode)
 
 # ==============================
-# REGISTER (WITH ROLE)
+# TOGGLE WAF 🔥
+# ==============================
+@app.route('/toggle_waf')
+def toggle_waf():
+    global waf_enabled
+    waf_enabled = not waf_enabled
+    return redirect(request.referrer or url_for('home'))
+
+
+# ==============================
+# TOGGLE MODE 🔥
+# ==============================
+@app.route('/toggle_mode')
+def toggle_mode():
+    global secure_mode
+    secure_mode = not secure_mode
+    return redirect(request.referrer or url_for('home'))
+
+# ==============================
+# REGISTER
 # ==============================
 @app.route('/register', methods=['GET','POST'])
 def register():
@@ -130,7 +156,7 @@ def register():
     return render_template("register.html", waf=waf_enabled, secure=secure_mode)
 
 # ==============================
-# LOGIN (WITH ROLE + REDIRECT)
+# LOGIN
 # ==============================
 @app.route('/login', methods=['GET','POST'])
 def login():
@@ -153,6 +179,7 @@ def login():
         ml_attack = ml_detect(input_text)
         attack_type = get_attack_type(input_text)
 
+        # BLOCK ATTACK
         if waf_enabled and (rule_attack or ml_attack):
             cursor.execute(
                 "INSERT INTO attacks (input, type, status, ip) VALUES (%s, %s, %s, %s)",
@@ -162,21 +189,18 @@ def login():
             conn.close()
             return "🚫 Attack Blocked!"
 
-        if secure_mode:
-            cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
-            user = cursor.fetchone()
-            login_status = user and check_password_hash(user[3], password)
-        else:
-            query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
-            cursor.execute(query)
-            user = cursor.fetchone()
-            login_status = True if user else False
+        cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
+        user = cursor.fetchone()
 
-        # 🔥 GET ROLE
+        login_status = False
         role = "user"
+
         if user:
             role = user[4]
+            if check_password_hash(user[3], password):
+                login_status = True
 
+        # LOG ATTACKS
         if rule_attack or ml_attack:
             status = "Blocked" if waf_enabled else "Allowed"
             cursor.execute(
@@ -188,27 +212,17 @@ def login():
         conn.close()
 
         if login_status:
-            session['user'] = username
+            session['user'] = user[1]
             session['role'] = role
 
-            if role == "admin":
+            if role == 'admin':
                 return redirect('/dashboard')
             else:
-                return redirect('/user_dashboard')
+                return redirect('/')
         else:
             return "Invalid Credentials!"
 
     return render_template("login.html", waf=waf_enabled, secure=secure_mode)
-
-# ==============================
-# USER DASHBOARD
-# ==============================
-@app.route('/user_dashboard')
-def user_dashboard():
-    if 'user' not in session:
-        return redirect('/login')
-
-    return f"👋 Welcome {session['user']} (User Panel)"
 
 # ==============================
 # ADMIN PANEL
@@ -260,15 +274,7 @@ def delete_user(user_id):
     return redirect('/admin')
 
 # ==============================
-# LOGOUT
-# ==============================
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect('/')
-
-# ==============================
-# DASHBOARD (ADMIN ONLY)
+# DASHBOARD
 # ==============================
 @app.route('/dashboard')
 def dashboard():
@@ -276,7 +282,7 @@ def dashboard():
         return redirect('/login')
 
     if session.get('role') != 'admin':
-        return "🚫 Access Denied (Admin Only)"
+        return "🚫 Access Denied"
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -298,6 +304,14 @@ def dashboard():
                            logs=logs,
                            waf=waf_enabled,
                            secure=secure_mode)
+
+# ==============================
+# LOGOUT
+# ==============================
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/')
 
 # ==============================
 # RUN
