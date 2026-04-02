@@ -225,6 +225,49 @@ def login():
     return render_template("login.html", waf=waf_enabled, secure=secure_mode)
 
 # ==============================
+# ATTACK LAB 🔥
+# ==============================
+@app.route('/attack_lab', methods=['GET','POST'])
+def attack_lab():
+    result = None
+
+    if request.method == 'POST':
+        payload = request.form['payload']
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+
+        rule_attack = detect_attack(payload)
+        ml_attack = ml_detect(payload)
+        attack_type = get_attack_type(payload)
+
+        if waf_enabled and (rule_attack or ml_attack):
+            status = "Blocked"
+        elif rule_attack or ml_attack:
+            status = "Allowed"
+        else:
+            status = "Safe"
+
+        # LOG INTO DB
+        if rule_attack or ml_attack:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "INSERT INTO attacks (input, type, status, ip) VALUES (%s, %s, %s, %s)",
+                (payload, attack_type, status, ip)
+            )
+
+            conn.commit()
+            conn.close()
+
+        result = {
+            "payload": payload,
+            "type": attack_type,
+            "status": status
+        }
+
+    return render_template("attack_lab.html", result=result, waf=waf_enabled, secure=secure_mode)
+
+# ==============================
 # ADMIN PANEL
 # ==============================
 @app.route('/admin')
