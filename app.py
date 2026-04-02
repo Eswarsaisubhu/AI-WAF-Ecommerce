@@ -6,12 +6,13 @@ from time import time
 
 app = Flask(__name__)
 app.secret_key = "secret123"
+
+# ==============================
+# GLOBAL USER CONTEXT
+# ==============================
 @app.context_processor
 def inject_user():
-    return dict(
-        user=session.get('user'),
-        role=session.get('role')
-    )
+    return dict(user=session.get('user'), role=session.get('role'))
 
 # ==============================
 # GLOBAL MODES
@@ -20,18 +21,16 @@ waf_enabled = False
 secure_mode = False
 
 # ==============================
-# RATE LIMIT 🔥
+# RATE LIMIT
 # ==============================
 requests_log = {}
 
 def is_rate_limited(ip):
     now = time()
     requests = requests_log.get(ip, [])
-
-    # keep only last 10 seconds
     requests = [r for r in requests if now - r < 10]
 
-    if len(requests) >= 5:   # FIXED (>= instead of >)
+    if len(requests) >= 5:
         return True
 
     requests.append(now)
@@ -47,7 +46,6 @@ vectorizer = None
 try:
     model = pickle.load(open("model.pkl", "rb"))
     vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
-    print("✅ ML Model Loaded")
 except:
     print("⚠️ ML Model not found")
 
@@ -56,8 +54,7 @@ def ml_detect(text):
         return False
     try:
         vec = vectorizer.transform([text])
-        prediction = model.predict(vec)
-        return prediction[0] == 1
+        return model.predict(vec)[0] == 1
     except:
         return False
 
@@ -73,62 +70,41 @@ def get_db_connection():
     )
 
 # ==============================
-# ATTACK TYPE DETECTION
+# ATTACK TYPE
 # ==============================
 def get_attack_type(text):
     text = text.lower()
-
     if "select" in text or "drop" in text or "' or" in text:
         return "SQL Injection"
     elif "<script>" in text or "alert(" in text:
         return "XSS"
-    else:
-        return "Unknown"
+    return "Unknown"
 
-# ==============================
-# RULE DETECTION
-# ==============================
 def detect_attack(text):
     patterns = ["' OR '1'='1", "--", "' OR 1=1", "DROP TABLE", "UNION SELECT", "<script>"]
     return any(p.lower() in text.lower() for p in patterns)
-
-# ==============================
-# PRODUCTS
-# ==============================
-products = [
-    {"id":1,"name":"Ravens Oversized Street Tee","price":1299,"image":"tee.jpg"},
-    {"id":2,"name":"Ravens Urban Black Hoodie","price":2499,"image":"hoodie.jpg"},
-    {"id":3,"name":"Ravens Vintage Denim Jacket","price":3999,"image":"jacket.jpg"},
-    {"id":4,"name":"Ravens Slim Fit Street Jeans","price":2799,"image":"jeans.jpg"},
-    {"id":5,"name":"Ravens Summer Graphic Tee","price":999,"image":"tee2.jpg"},
-    {"id":6,"name":"Ravens Minimal White Hoodie","price":2299,"image":"hoodie2.jpg"}
-]
 
 # ==============================
 # HOME
 # ==============================
 @app.route('/')
 def home():
-    return render_template("index.html", products=products, waf=waf_enabled, secure=secure_mode)
+    return render_template("index.html", waf=waf_enabled, secure=secure_mode)
 
 # ==============================
-# TOGGLE WAF 🔥
+# TOGGLES
 # ==============================
 @app.route('/toggle_waf')
 def toggle_waf():
     global waf_enabled
     waf_enabled = not waf_enabled
-    return redirect(request.referrer or url_for('home'))
+    return redirect(request.referrer or '/')
 
-
-# ==============================
-# TOGGLE MODE 🔥
-# ==============================
 @app.route('/toggle_mode')
 def toggle_mode():
     global secure_mode
     secure_mode = not secure_mode
-    return redirect(request.referrer or url_for('home'))
+    return redirect(request.referrer or '/')
 
 # ==============================
 # REGISTER
@@ -136,38 +112,37 @@ def toggle_mode():
 @app.route('/register', methods=['GET','POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = generate_password_hash(request.form['password'])
-
         conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute(
-            "INSERT INTO users (username, email, password, role) VALUES (%s, %s, %s, %s)",
-            (username, email, password, "user")
+            "INSERT INTO users (username,email,password,role) VALUES (%s,%s,%s,%s)",
+            (
+                request.form['username'],
+                request.form['email'],
+                generate_password_hash(request.form['password']),
+                "user"
+            )
         )
 
         conn.commit()
         conn.close()
 
-        return redirect(url_for('login'))
+        return redirect('/login')
 
-    return render_template("register.html", waf=waf_enabled, secure=secure_mode)
+    return render_template("register.html")
 
 # ==============================
 # LOGIN
 # ==============================
 @app.route('/login', methods=['GET','POST'])
 def login():
-    global waf_enabled, secure_mode
-
     if request.method == 'POST':
+
         username = request.form['username']
         password = request.form['password']
         input_text = username + " " + password
-
-        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        ip = request.remote_addr
 
         if is_rate_limited(ip):
             return "🚫 Too many requests! Try later."
@@ -175,14 +150,13 @@ def login():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        rule_attack = detect_attack(input_text)
-        ml_attack = ml_detect(input_text)
+        rule = detect_attack(input_text)
+        ml = ml_detect(input_text)
         attack_type = get_attack_type(input_text)
 
-        # BLOCK ATTACK
-        if waf_enabled and (rule_attack or ml_attack):
+        if waf_enabled and (rule or ml):
             cursor.execute(
-                "INSERT INTO attacks (input, type, status, ip) VALUES (%s, %s, %s, %s)",
+                "INSERT INTO attacks (input,type,status,ip) VALUES (%s,%s,%s,%s)",
                 (input_text, attack_type, "Blocked", ip)
             )
             conn.commit()
@@ -192,140 +166,60 @@ def login():
         cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
         user = cursor.fetchone()
 
-        login_status = False
-        role = "user"
-
-        if user:
-            role = user[4]
-            if check_password_hash(user[3], password):
-                login_status = True
-
-        # LOG ATTACKS
-        if rule_attack or ml_attack:
-            status = "Blocked" if waf_enabled else "Allowed"
-            cursor.execute(
-                "INSERT INTO attacks (input, type, status, ip) VALUES (%s, %s, %s, %s)",
-                (input_text, attack_type, status, ip)
-            )
-
-        conn.commit()
-        conn.close()
-
-        if login_status:
+        if user and check_password_hash(user[3], password):
             session['user'] = user[1]
-            session['role'] = role
+            session['role'] = user[4]
 
-            if role == 'admin':
+            if user[4] == "admin":
                 return redirect('/dashboard')
-            else:
-                return redirect('/')
-        else:
-            return "Invalid Credentials!"
+            return redirect('/')
 
-    return render_template("login.html", waf=waf_enabled, secure=secure_mode)
+        return "Invalid Credentials!"
 
-# ==============================
-# ATTACK LAB 🔥
-# ==============================
-@app.route('/attack_lab', methods=['GET','POST'])
-def attack_lab():
-    result = None
-
-    if request.method == 'POST':
-        payload = request.form['payload']
-        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-
-        rule_attack = detect_attack(payload)
-        ml_attack = ml_detect(payload)
-        attack_type = get_attack_type(payload)
-
-        if waf_enabled and (rule_attack or ml_attack):
-            status = "Blocked"
-        elif rule_attack or ml_attack:
-            status = "Allowed"
-        else:
-            status = "Safe"
-
-        # LOG INTO DB
-        if rule_attack or ml_attack:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-
-            cursor.execute(
-                "INSERT INTO attacks (input, type, status, ip) VALUES (%s, %s, %s, %s)",
-                (payload, attack_type, status, ip)
-            )
-
-            conn.commit()
-            conn.close()
-
-        result = {
-            "payload": payload,
-            "type": attack_type,
-            "status": status
-        }
-
-    return render_template("attack_lab.html", result=result, waf=waf_enabled, secure=secure_mode)
+    return render_template("login.html")
 
 # ==============================
-# ADMIN PANEL
+# REPORT
 # ==============================
-@app.route('/admin')
-def admin_panel():
-    if 'user' not in session:
-        return redirect('/login')
-
-    if session.get('role') != 'admin':
-        return "🚫 Admin Only"
-
+@app.route('/report')
+def report():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, username, email, role FROM users")
-    users = cursor.fetchall()
+    cursor.execute("SELECT COUNT(*) FROM attacks")
+    total = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM attacks WHERE status='Blocked'")
+    blocked = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM attacks WHERE status='Allowed'")
+    allowed = cursor.fetchone()[0]
+
+    cursor.execute("SELECT type, COUNT(*) FROM attacks GROUP BY type ORDER BY COUNT(*) DESC LIMIT 1")
+    result = cursor.fetchone()
+
+    most_common = result[0] if result else "None"
 
     conn.close()
 
-    return render_template("admin.html", users=users)
+    blocked_percent = (blocked/total*100) if total else 0
+    allowed_percent = (allowed/total*100) if total else 0
 
-@app.route('/make_admin/<int:user_id>')
-def make_admin(user_id):
-    if session.get('role') != 'admin':
-        return "🚫 Not allowed"
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("UPDATE users SET role='admin' WHERE id=%s", (user_id,))
-    conn.commit()
-    conn.close()
-
-    return redirect('/admin')
-
-@app.route('/delete_user/<int:user_id>')
-def delete_user(user_id):
-    if session.get('role') != 'admin':
-        return "🚫 Not allowed"
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("DELETE FROM users WHERE id=%s", (user_id,))
-    conn.commit()
-    conn.close()
-
-    return redirect('/admin')
+    return render_template("report.html",
+                           total=total,
+                           blocked=blocked,
+                           allowed=allowed,
+                           blocked_percent=round(blocked_percent,2),
+                           allowed_percent=round(allowed_percent,2),
+                           most_common=most_common)
 
 # ==============================
 # DASHBOARD
 # ==============================
 @app.route('/dashboard')
 def dashboard():
-    if 'user' not in session:
-        return redirect('/login')
-
     if session.get('role') != 'admin':
-        return "🚫 Access Denied"
+        return "🚫 Admin Only"
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -341,12 +235,7 @@ def dashboard():
 
     conn.close()
 
-    return render_template("dashboard.html",
-                           blocked=blocked,
-                           allowed=allowed,
-                           logs=logs,
-                           waf=waf_enabled,
-                           secure=secure_mode)
+    return render_template("dashboard.html", blocked=blocked, allowed=allowed, logs=logs)
 
 # ==============================
 # LOGOUT
@@ -360,4 +249,4 @@ def logout():
 # RUN
 # ==============================
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5500, debug=True)
+    app.run(debug=True)
